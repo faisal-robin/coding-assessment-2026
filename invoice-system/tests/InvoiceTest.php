@@ -32,6 +32,7 @@ class InvoiceTest {
         $this->test_add_multiple_items();
         $this->test_save_and_load();
         $this->test_tax_calculation();
+        $this->test_item_validation();
 
         echo "\n" . str_repeat("=", 50) . "\n";
         echo "Tests Passed: " . $this->testsPassed . "\n";
@@ -172,6 +173,51 @@ class InvoiceTest {
             "Tax should be $10.00, got $" . number_format($tax, 2)
         );
     }
+
+    /**
+     * Test: Invoice item input validation
+     * Status: NEW
+     *
+     * Ensures that invalid item data throws exceptions
+     */
+    private function test_item_validation() {
+        // Test empty name
+        try {
+            $invoice = new Invoice("Customer Validation");
+            $invoice->addItem("", 10.0, 1);
+            $this->assert(false, "test_item_validation_empty_name", "Empty name should throw exception");
+        } catch (InvalidArgumentException $e) {
+            $this->assert(true, "test_item_validation_empty_name", "Empty name correctly threw exception");
+        }
+
+        // Test zero price
+        try {
+            $invoice = new Invoice("Customer Validation");
+            $invoice->addItem("Product", 0.0, 1);
+            $this->assert(false, "test_item_validation_zero_price", "Zero price should throw exception");
+        } catch (InvalidArgumentException $e) {
+            $this->assert(true, "test_item_validation_zero_price", "Zero price correctly threw exception");
+        }
+
+        // Test negative quantity
+        try {
+            $invoice = new Invoice("Customer Validation");
+            $invoice->addItem("Product", 10.0, -1);
+            $this->assert(false, "test_item_validation_negative_quantity", "Negative quantity should throw exception");
+        } catch (InvalidArgumentException $e) {
+            $this->assert(true, "test_item_validation_negative_quantity", "Negative quantity correctly threw exception");
+        }
+
+        // Test valid item (should pass)
+        try {
+            $invoice = new Invoice("Customer Validation");
+            $invoice->addItem("Valid Product", 10.0, 1);
+            $this->assert(true, "test_item_validation_valid_item", "Valid item did not throw exception");
+        } catch (InvalidArgumentException $e) {
+            $this->assert(false, "test_item_validation_valid_item", "Valid item incorrectly threw exception");
+        }
+    }
+
 
     /**
      * Simple assertion helper
