@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/Validators/InvoiceItemValidator.php';
 use Validators\InvoiceItemValidator;
+use PDF\PDFGenerator;
 
 /**
  * Invoice Class
@@ -169,5 +170,11 @@ class Invoice {
         }
 
         throw new Exception("Invoice not found: " . $id);
+    }
+
+    public function generatePDF(string $filename = null): string
+    {
+        $generator = new PDFGenerator();
+        return $generator->generatePDF($this, $filename);
     }
 }
