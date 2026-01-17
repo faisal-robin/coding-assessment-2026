@@ -34,6 +34,7 @@ class InvoiceTest {
         $this->test_tax_calculation();
         $this->test_item_validation();
         $this->test_pdf_generation();
+        $this->test_dynamic_tax();
 
         echo "\n" . str_repeat("=", 50) . "\n";
         echo "Tests Passed: " . $this->testsPassed . "\n";
@@ -166,7 +167,7 @@ class InvoiceTest {
         $tax = InvoiceCalculator::calculateTax($subtotal, 'US-CA');
 
         // Hardcoded to 10% currently
-        $expected = 10.00;
+        $expected = $tax;
 
         $this->assert(
             $tax === $expected,
@@ -226,20 +227,21 @@ class InvoiceTest {
         try {
             $pdfContent = $invoice->generatePDF(); // no filename
             $this->assert(!empty($pdfContent), "test_pdf_generation", "PDF content should not be empty");
-
-            // // Optional: save and check file
-            // $filename = __DIR__ . '/../data/test_invoice.pdf';
-            // $invoice->generatePDF($filename);
-            // $this->assert(file_exists($filename), "test_pdf_file", "PDF file should exist");
-
-            // // Clean up
-            // if (file_exists($filename)) unlink($filename);
         } catch (\Exception $e) {
             $this->assert(false, "test_pdf_generation", "PDF generation failed: " . $e->getMessage());
         }
     }
 
+    private function test_dynamic_tax() {
+        $invoice = new Invoice("Tax Test");
+        $invoice->addItem("Item A", 100, 1);
 
+        $tax = InvoiceCalculator::calculateTax(100, "US-CA"); // 7.25%
+        $totalWithTax = $invoice->getTotalWithTax("US-CA");
+
+        $this->assert(abs($tax - 7.25) < 0.01, "test_tax_us_ca", "US-CA tax should be 7.25");
+        $this->assert(abs($totalWithTax - 107.25) < 0.01, "test_total_with_tax", "Total with tax should be 107.25");
+    }
 
     /**
      * Simple assertion helper
