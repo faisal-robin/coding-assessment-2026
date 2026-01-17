@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/Validators/InvoiceItemValidator.php';
+use Validators\InvoiceItemValidator;
 
 /**
  * Invoice Class
@@ -26,7 +28,10 @@ class Invoice {
      * Note: Make sure to use consistent naming!
      */
     public function addItem($name, $price, $quantity) {
-        // No validation yet - add later?
+
+        // Validate first
+        InvoiceItemValidator::validate($name, $price, $quantity);
+
         $this->items[] = [
             'name' => $name,
             'price' => $price,
