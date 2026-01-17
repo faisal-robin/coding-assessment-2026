@@ -106,11 +106,24 @@ class Invoice {
      */
     public function saveToFile($filename = 'data/invoices.json') {
         $data = $this->toArray();
+        $invoices = [];
 
-        // This is wrong - overwrites the whole file!
-        // Should load existing invoices and append
-        // But json_encode is easier for now...
-        file_put_contents($filename, json_encode($data, JSON_PRETTY_PRINT));
+        if (file_exists($filename)) {
+            $contents = file_get_contents($filename);
+            $decoded = json_decode($contents, true);
+
+            if (is_array($decoded)) {
+                // Handle single invoice case
+                $invoices = isset($decoded['id']) ? [$decoded] : $decoded;
+            }
+        }
+
+        $invoices[] = $data;
+
+        file_put_contents(
+            $filename,
+            json_encode($invoices, JSON_PRETTY_PRINT)
+        );
 
         // TODO: Fix this before client demo!
         return true;
