@@ -33,6 +33,7 @@ class InvoiceTest {
         $this->test_save_and_load();
         $this->test_tax_calculation();
         $this->test_item_validation();
+        $this->test_pdf_generation();
 
         echo "\n" . str_repeat("=", 50) . "\n";
         echo "Tests Passed: " . $this->testsPassed . "\n";
@@ -217,6 +218,27 @@ class InvoiceTest {
             $this->assert(false, "test_item_validation_valid_item", "Valid item incorrectly threw exception");
         }
     }
+
+    private function test_pdf_generation() {
+        $invoice = new Invoice("PDF Test Customer");
+        $invoice->addItem("Item 1", 10.0, 2);
+
+        try {
+            $pdfContent = $invoice->generatePDF(); // no filename
+            $this->assert(!empty($pdfContent), "test_pdf_generation", "PDF content should not be empty");
+
+            // // Optional: save and check file
+            // $filename = __DIR__ . '/../data/test_invoice.pdf';
+            // $invoice->generatePDF($filename);
+            // $this->assert(file_exists($filename), "test_pdf_file", "PDF file should exist");
+
+            // // Clean up
+            // if (file_exists($filename)) unlink($filename);
+        } catch (\Exception $e) {
+            $this->assert(false, "test_pdf_generation", "PDF generation failed: " . $e->getMessage());
+        }
+    }
+
 
 
     /**
