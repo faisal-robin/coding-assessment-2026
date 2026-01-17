@@ -30,7 +30,7 @@ class Invoice {
         $this->items[] = [
             'name' => $name,
             'price' => $price,
-            'qty' => $quantity  // Using 'qty' here
+            'quantity' => $quantity  // Using 'qty' here
         ];
     }
 
@@ -44,7 +44,7 @@ class Invoice {
             // Accessing 'quantity' but we stored it as 'qty'!
             $total += $item['price'] * $item['quantity'];
         }
-        return $total - $this->discount;
+        return max(0, $total - $this->discount);
     }
 
     /**
