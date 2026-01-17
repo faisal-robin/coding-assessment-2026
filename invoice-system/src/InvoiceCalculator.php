@@ -1,117 +1,122 @@
 <?php
 
-/**
- * InvoiceCalculator - Helper class for invoice calculations
- *
- * Static utility methods for business logic
- * Client keeps changing their mind on requirements...
- */
 class InvoiceCalculator {
 
+    private static $taxRates = null;
+
     /**
-     * Calculate tax for an invoice
+     * Load tax rates from JSON file (only once)
+     */
+    private static function loadTaxRates($filename = __DIR__ . '/../data/tax_rates.json') {
+        if (self::$taxRates === null) {
+            if (!file_exists($filename)) {
+                throw new Exception("Tax rates file not found: " . $filename);
+            }
+
+            $json = file_get_contents($filename);
+            $rates = json_decode($json, true);
+
+            if ($rates === null) {
+                throw new Exception("Failed to decode tax rates JSON");
+            }
+
+            self::$taxRates = $rates;
+        }
+    }
+
+    /**
+     * Calculate tax for a subtotal
      *
-     * TODO: Load tax rates from data/tax_rates.json instead of hardcoding
-     * Currently just using 10% for everything which is WRONG
-     *
-     * @param float $subtotal The subtotal before tax
-     * @param string $region Region code (e.g., "US-CA", "CA-ON")
+     * @param float $subtotal
+     * @param string $region Format: "Country-State" e.g., "US-CA"
      * @return float Tax amount
      */
-    public static function calculateTax($subtotal, $region = 'US-CA') {
-        // TEMPORARY hardcoded value - need to load from JSON
-        // Client said tax rates change frequently so should be in config
-        $taxRate = 0.10;
+    public static function calculateTax(float $subtotal, string $region = 'US-CA'): float {
+        self::loadTaxRates();
 
-        // TODO: Load from tax_rates.json like this:
-        // $taxData = json_decode(file_get_contents('data/tax_rates.json'), true);
-        // Parse $region to get country and state
-        // Look up actual rate
-        // Handle default rates
-        //
-        // Ran out of time Friday, will fix Monday
+        [$country, $state] = explode('-', $region);
 
-        return $subtotal * $taxRate;
+        $rate = 0.0;
+
+        if (isset(self::$taxRates[$country])) {
+            if (isset(self::$taxRates[$country][$state])) {
+                $rate = self::$taxRates[$country][$state];
+            } elseif (isset(self::$taxRates[$country]['default'])) {
+                $rate = self::$taxRates[$country]['default'];
+            }
+        }
+
+        return round($subtotal * $rate, 2);
     }
 
     /**
      * Apply business rules to an invoice
      *
-     * Rules from client (received via email last Thursday):
-     * 1. Orders over $1000 get automatic 5% discount
-     * 2. BUT discount should NOT apply to items marked as "sale" items
-     * 3. How do we even track which items are on sale??
-     * 4. Does the $1000 include tax or not?? (Waiting for response)
-     *
-     * Client keeps changing their mind on this feature
-     * Started implementation 3 times, gave up
-     *
      * @param Invoice $invoice
      * @return Invoice Modified invoice
      */
     public static function applyBusinessRules($invoice) {
-        // Need to figure out requirements first
-
-        // Pseudo-code for what they MIGHT want:
-        // if (invoice total > 1000 && !has_sale_items) {
-        //     apply 5% discount
-        // }
-
-        // Problems:
-        // 1. How to identify sale items? Add a flag to item array?
-        // 2. Does discount apply before or after tax?
-        // 3. Can discounts stack with other discounts?
-        // 4. What if they return items - does discount get recalculated?
-
-        // For now, just return the invoice unchanged
-        // Need meeting with client to clarify
-
+        // Placeholder for future business rules
         return $invoice;
     }
 
     /**
      * Calculate line item total
-     * This one actually works correctly!
      *
      * @param array $item Item with price and quantity/qty
      * @return float Line item total
      */
-    public static function calculateLineItem($item) {
+    public static function calculateLineItem(array $item): float {
         $price = $item['price'];
+        $quantity = $item['quantity'];
 
-        // Handle both 'quantity' and 'qty' naming
-        // (Someone was inconsistent with naming)
-        $quantity = isset($item['quantity']) ? $item['quantity'] : $item['qty'];
+        if ($quantity < 0 || $price < 0) {
+            throw new InvalidArgumentException("Negative price or quantity not allowed");
+        }
 
         return $price * $quantity;
     }
 
     /**
      * Format currency for display
-     * Quick helper I added
      *
      * @param float $amount
-     * @return string Formatted currency
+     * @return string
      */
-    public static function formatCurrency($amount) {
+    public static function formatCurrency(float $amount): string {
         return '$' . number_format($amount, 2);
     }
 
     /**
-     * Validate invoice data
-     * Started but didn't finish
+     * Validate invoice
      *
-     * Should check:
-     * - No negative prices
-     * - No negative quantities
-     * - Customer name not empty
-     * - At least one item
-     * - etc.
+     * @param Invoice $invoice
+     * @return array List of validation errors
      */
-    public static function validateInvoice($invoice) {
+    public static function validateInvoice($invoice): array {
         $errors = [];
 
-        // TODO: Add actual validation logic
+        if (empty($invoice->getCustomer())) {
+            $errors[] = "Customer name cannot be empty";
+        }
+
+        $items = $invoice->getItems();
+        if (empty($items)) {
+            $errors[] = "Invoice must have at least one item";
+        }
+
+        foreach ($items as $i => $item) {
+            if (empty($item['name'])) {
+                $errors[] = "Item #$i name cannot be empty";
+            }
+            if (($item['price'] ?? 0) <= 0) {
+                $errors[] = "Item #$i price must be greater than 0";
+            }
+            $qty = $item['quantity'];
+            if ($qty <= 0) {
+                $errors[] = "Item #$i quantity must be greater than 0";
+            }
+        }
 
         return $errors;
     }

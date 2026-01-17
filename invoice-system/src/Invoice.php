@@ -177,4 +177,12 @@ class Invoice {
         $generator = new PDFGenerator();
         return $generator->generatePDF($this, $filename);
     }
+
+    public function getTotalWithTax($region = 'US-CA'): float 
+    {
+        $subtotal = $this->getTotal();
+        $tax = InvoiceCalculator::calculateTax($subtotal, $region);
+        return $subtotal + $tax;
+    }
+
 }
